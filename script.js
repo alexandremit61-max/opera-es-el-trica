@@ -1,159 +1,139 @@
-:root {
-    --orange: #F15A24;
-    --green: #27ae60;
-    --dark: #2c3e50;
-    --bg: #f4f7f6;
-    --navy: #34495e;
+let chamados = [];
+
+// Carrega os dados salvos no navegador ao iniciar
+window.onload = function() {
+    const salvos = localStorage.getItem('saski_eletrica_db');
+    if (salvos) {
+        chamados = JSON.parse(salvos);
+        renderizar();
+    }
+};
+
+// Salva o estado atual no LocalStorage
+function salvarDados() {
+    localStorage.setItem('saski_eletrica_db', JSON.stringify(chamados));
+    renderizar();
 }
 
-body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color: var(--bg);
-    margin: 0;
-    color: var(--dark);
+function adicionarChamado() {
+    const input = document.getElementById('rawInput');
+    const texto = input.value.trim();
+    if (!texto) return;
+
+    // Busca exatamente 6 números para o ID do chamado
+    const matchId = texto.match(/\d{6}/);
+    const ticketId = matchId ? matchId[0] : "000000";
+    
+    // Extrai o Local (entre hífens ou 1ª linha)
+    const partes = texto.split('-');
+    let local = "Local não identificado";
+    if (partes.length > 1) {
+        local = partes[1].trim() + (partes[2] ? " - " + partes[2].trim() : "");
+    } else {
+        local = texto.split('\n')[0].substring(0, 60);
+    }
+
+    const novo = {
+        id: ticketId,
+        local: local,
+        url: `https://saski.brisanet.net.br/chamado/${ticketId}`,
+        historico: []
+    };
+
+    chamados.unshift(novo);
+    input.value = "";
+    salvarDados();
 }
 
-.main-header {
-    background: var(--orange);
-    color: white;
-    padding: 1rem 5%;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+function adicionarComentario(id) {
+    const campo = document.getElementById(`input-${id}`);
+    const msg = campo.value.trim();
+    if (!msg) return;
+
+    const index = chamados.findIndex(c => c.id == id);
+    const hora = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    // Adiciona ao histórico acumulativo do chamado
+    chamados[index].historico.push({ hora: hora, texto: msg });
+
+    campo.value = ""; 
+    salvarDados();
 }
 
-.main-header h1 { margin: 0; font-size: 1.5rem; }
-
-.container { padding: 20px 5%; max-width: 900px; margin: auto; }
-
-.card {
-    background: white;
-    padding: 20px;
-    border-radius: 10px;
-    box-shadow: 0 2px 15px rgba(0,0,0,0.05);
-    margin-bottom: 25px;
+function finalizarChamado(id) {
+    if (confirm(`Confirmar finalização do chamado #${id}?`)) {
+        // Filtra para remover apenas o ID clicado
+        chamados = chamados.filter(c => c.id !== id);
+        salvarDados();
+    }
 }
 
-h3 { margin-top: 0; color: var(--orange); border-bottom: 1px solid #eee; padding-bottom: 10px; }
+function renderizar() {
+    const container = document.getElementById('listaChamados');
+    document.getElementById('count').innerText = chamados.length;
+    container.innerHTML = "";
 
-textarea {
-    width: 100%;
-    padding: 12px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    box-sizing: border-box;
-    font-family: inherit;
+    chamados.forEach(c => {
+        const card = document.createElement('div');
+        card.className = 'ticket-card';
+        card.innerHTML = `
+            <div class="ticket-header">
+                <a href="${c.url}" target="_blank">🔗 TICKET #${c.id}</a>
+                <small>ELÉTRICA</small>
+            </div>
+            
+            <div class="local-box">📍 ${c.local}</div>
+
+            <div class="historico-container">
+                <div class="historico-list" id="hist-${c.id}">
+                    ${c.historico.length === 0 ? '<p style="color:#aaa; text-align:center">Aguardando tratativas...</p>' : 
+                      c.historico.map(h => `<div class="msg-item"><b>[${h.hora}]</b> ${h.texto}</div>`).join('')}
+                </div>
+            </div>
+
+            <div class="acao-tratativa">
+                <input type="text" id="input-${c.id}" placeholder="Escreva aqui..." onkeypress="if(event.key==='Enter') adicionarComentario('${c.id}')">
+                <button class="btn-add" onclick="adicionarComentario('${c.id}')">ADD</button>
+            </div>
+
+            <button class="btn-finalize" onclick="finalizarChamado('${c.id}')">✓ CONCLUIR LOCAL</button>
+        `;
+        container.appendChild(card);
+        const d = document.getElementById(`hist-${c.id}`);
+        d.scrollTop = d.scrollHeight;
+    });
 }
 
-.btn-primary {
-    background: var(--orange);
-    color: white;
-    border: none;
-    padding: 14px;
-    width: 100%;
-    border-radius: 8px;
-    font-weight: bold;
-    cursor: pointer;
-    margin-top: 12px;
-}
+function copiarRelatorioPlantao() {
+    if (chamados.length === 0) return alert("Nada para relatar.");
 
-.btn-share {
-    background: white;
-    color: var(--orange);
-    border: none;
-    padding: 10px 18px;
-    border-radius: 6px;
-    font-weight: bold;
-    cursor: pointer;
-}
+    let relatorio = `*RELATÓRIO DE PASSAGEM DE PLANTÃO - ELÉTRICA*\n`;
+    relatorio += `====================================\n\n`;
 
-/* CARDS DE CHAMADO */
-.ticket-card {
-    background: white;
-    border-left: 10px solid var(--orange);
-    padding: 20px;
-    border-radius: 10px;
-    margin-bottom: 20px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-}
+    chamados.forEach(c => {
+        relatorio += `📍 *LOCAL:* ${c.local}\n`;
+        relatorio += `🆔 *CHAMADO:* #${c.id}\n`;
+        relatorio += `🔗 *LINK:* ${c.url}\n`;
+        relatorio += `📝 *TRATATIVAS:* \n`;
+        
+        if (c.historico.length === 0) {
+            relatorio += `   - Sem atualizações.\n`;
+        } else {
+            c.historico.forEach(h => {
+                relatorio += `   - [${h.hora}] ${h.texto}\n`;
+            });
+        }
+        relatorio += `\n------------------------------------\n\n`;
+    });
 
-.ticket-header {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 15px;
-    align-items: center;
-}
+    const textarea = document.createElement('textarea');
+    textarea.value = relatorio;
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textarea);
 
-.ticket-header a {
-    color: var(--orange);
-    font-weight: bold;
-    text-decoration: none;
-    background: #fff1eb;
-    padding: 6px 12px;
-    border-radius: 6px;
-}
-
-.local-box {
-    background: #f8f9fa;
-    padding: 12px;
-    border-radius: 8px;
-    margin-bottom: 15px;
-    border: 1px solid #eee;
-    font-weight: bold;
-}
-
-/* HISTÓRICO */
-.historico-container {
-    background: #fdfdfd;
-    border: 1px solid #eee;
-    border-radius: 8px;
-    margin-bottom: 15px;
-}
-
-.historico-list {
-    padding: 12px;
-    max-height: 200px;
-    overflow-y: auto;
-}
-
-.msg-item {
-    padding: 8px 0;
-    border-bottom: 1px dotted #e0e0e0;
-    font-size: 0.95rem;
-}
-
-.msg-item b { color: var(--orange); margin-right: 8px; }
-
-.acao-tratativa { display: flex; gap: 10px; margin-top: 15px; }
-.acao-tratativa input { flex: 1; padding: 12px; border: 1px solid #ccc; border-radius: 6px; }
-
-.btn-add {
-    background: var(--navy);
-    color: white;
-    border: none;
-    padding: 0 20px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: bold;
-}
-
-.btn-finalize {
-    background: var(--green);
-    color: white;
-    border: none;
-    padding: 12px;
-    width: 100%;
-    border-radius: 8px;
-    font-weight: bold;
-    cursor: pointer;
-    margin-top: 15px;
-}
-
-.toast {
-    position: fixed; bottom: 20px; right: 20px;
-    background: #222; color: white;
-    padding: 15px 30px; border-radius: 10px;
-    display: none; font-weight: bold;
-    z-index: 1000;
+    const toast = document.getElementById('toast');
+    toast.style.display = 'block';
+    setTimeout(() => { toast.style.display = 'none'; }, 3000);
 }
