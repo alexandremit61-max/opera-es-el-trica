@@ -1,0 +1,27 @@
+<div id="app">
+  <header class="main-header">
+    <div class="logo-area">
+      <h1>OPERAÇÕES - ELÉTRICA</h1>
+      <p>Gestão de Incidentes</p>
+    </div>
+    <div class="header-actions">
+      <button onclick="copiarRelatorioPlantao()" class="btn-share">📋 COPIAR RELATÓRIO </button>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="card input-section">
+      <h3>📥 Novo Chamado</h3>
+      <textarea id="rawInput" placeholder="Cole o chamado ou link do Saski aqui..."></textarea>
+      <button onclick="adicionarChamado()" class="btn-primary">ADICIONAR AO MONITORAMENTO</button>
+    </section>
+
+    <section class="pendencias-section">
+      <div class="section-title">
+        <h2>Incidentes em Tratativa (<span id="count">0</span>)</h2>
+      </div>
+      <div id="listaChamados"></div>
+    </section>
+  </main>
+</div>
+<div id="toast" class="toast">Relatório copiado para o WhatsApp!</div>
