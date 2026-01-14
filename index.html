@@ -1,27 +1,45 @@
-<div id="app">
-  <header class="main-header">
-    <div class="logo-area">
-      <h1>OPERAÇÕES - ELÉTRICA</h1>
-      <p>Gestão de Incidentes</p>
-    </div>
-    <div class="header-actions">
-      <button onclick="copiarRelatorioPlantao()" class="btn-share">📋 COPIAR RELATÓRIO </button>
-    </div>
-  </header>
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SASKI IMOC - Gestão Elétrica</title>
+    <!-- Link para o arquivo CSS -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
 
-  <main class="container">
-    <section class="card input-section">
-      <h3>📥 Novo Chamado</h3>
-      <textarea id="rawInput" placeholder="Cole o chamado ou link do Saski aqui..."></textarea>
-      <button onclick="adicionarChamado()" class="btn-primary">ADICIONAR AO MONITORAMENTO</button>
-    </section>
+    <header class="main-header">
+        <div>
+            <h1>SASKI IMOC - ELÉTRICA</h1>
+            <small>Painel de Operações Infra</small>
+        </div>
+        <button onclick="copiarRelatorioPlantao()" class="btn-share">📋 COPIAR PASSAGEM DE PLANTÃO</button>
+    </header>
 
-    <section class="pendencias-section">
-      <div class="section-title">
-        <h2>Incidentes em Tratativa (<span id="count">0</span>)</h2>
-      </div>
-      <div id="listaChamados"></div>
-    </section>
-  </main>
-</div>
-<div id="toast" class="toast">Relatório copiado para o WhatsApp!</div>
+    <main class="container">
+        <!-- ÁREA DE ENTRADA -->
+        <section class="card">
+            <h3>📥 Entrada de Novo Chamado</h3>
+            <textarea id="rawInput" rows="3" placeholder="Cole aqui o texto do chamado do Saski..."></textarea>
+            <button onclick="adicionarChamado()" class="btn-primary">ADICIONAR À LISTA DE MONITORAMENTO</button>
+        </section>
+
+        <!-- LISTA DE CHAMADOS ATIVOS -->
+        <section>
+            <h2 class="section-title">
+                Incidentes Ativos: <span id="count">0</span>
+            </h2>
+            <div id="listaChamados">
+                <!-- Os cards aparecerão aqui via JS -->
+            </div>
+        </section>
+    </main>
+
+    <!-- Notificação de cópia -->
+    <div id="toast" class="toast">✅ Relatório copiado para o WhatsApp!</div>
+
+    <!-- Link para o arquivo JavaScript -->
+    <script src="script.js"></script>
+</body>
+</html>
