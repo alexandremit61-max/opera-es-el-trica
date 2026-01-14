@@ -1,139 +1,159 @@
-let chamados = [];
-
-function adicionarChamado() {
-    const input = document.getElementById('rawInput');
-    const texto = input.value.trim();
-    if (!texto) return;
-
-    // Regex atualizada para capturar exatamente 6 dígitos numéricos
-    const matchId = texto.match(/\d{6}/);
-    const ticketId = matchId ? matchId[0] : "000000";
-    
-    // Tenta extrair o local (texto entre hífens ou primeira linha)
-    const partes = texto.split('-');
-    let local = "Local não identificado";
-    if (partes.length > 1) {
-        local = partes[1].trim() + (partes[2] ? " - " + partes[2].trim() : "");
-    } else {
-        local = texto.split('\n')[0].substring(0, 50);
-    }
-
-    const novoChamado = {
-        id: ticketId,
-        local: local,
-        url: `https://saski.brisanet.net.br/chamado/${ticketId}`,
-        historico: []
-    };
-
-    chamados.push(novoChamado);
-    input.value = "";
-    renderizar();
+:root {
+    --orange: #F15A24;
+    --green: #27ae60;
+    --dark: #2c3e50;
+    --bg: #f4f7f6;
+    --navy: #34495e;
 }
 
-// Adiciona uma nova linha de tratativa sem remover o chamado
-function adicionarComentario(id) {
-    const inputField = document.getElementById(`input-${id}`);
-    const mensagem = inputField.value.trim();
-    if (!mensagem) return;
-
-    const index = chamados.findIndex(c => c.id == id);
-    const agora = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-    // Adiciona ao array de histórico do chamado específico
-    chamados[index].historico.push({
-        hora: agora,
-        texto: mensagem
-    });
-
-    inputField.value = ""; // Limpa apenas o campo de texto daquele card
-    renderizar();
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--bg);
+    margin: 0;
+    color: var(--dark);
 }
 
-// Finaliza APENAS o chamado clicado
-function finalizarChamado(id) {
-    if (confirm(`Finalizar e remover o chamado #${id}?`)) {
-        chamados = chamados.filter(c => c.id !== id);
-        renderizar();
-    }
+.main-header {
+    background: var(--orange);
+    color: white;
+    padding: 1rem 5%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 
-function renderizar() {
-    const lista = document.getElementById('listaChamados');
-    document.getElementById('count').innerText = chamados.length;
-    lista.innerHTML = "";
+.main-header h1 { margin: 0; font-size: 1.5rem; }
 
-    chamados.forEach(c => {
-        const card = document.createElement('div');
-        card.className = 'ticket-card';
-        card.innerHTML = `
-            <div class="ticket-header">
-                <a href="${c.url}" target="_blank">🔗 TICKET #${c.id}</a>
-                <small style="color: #999">ID: ${c.id}</small>
-            </div>
-            
-            <div class="local-box">📍 ${c.local}</div>
+.container { padding: 20px 5%; max-width: 900px; margin: auto; }
 
-            <div class="historico-container">
-                <div class="historico-list" id="hist-${c.id}">
-                    ${c.historico.length === 0 ? 
-                        '<p style="color:#aaa; text-align:center; margin:0">Nenhuma tratativa registrada ainda.</p>' : 
-                        c.historico.map(h => `<div class="msg-item"><b>[${h.hora}]</b> ${h.texto}</div>`).join('')
-                    }
-                </div>
-            </div>
-
-            <div class="acao-tratativa">
-                <input type="text" id="input-${c.id}" placeholder="Escreva a atualização...">
-                <button class="btn-add" onclick="adicionarComentario('${c.id}')">ADICIONAR</button>
-            </div>
-
-            <button class="btn-finalize" onclick="finalizarChamado('${c.id}')">✓ FINALIZAR TRATATIVA</button>
-        `;
-        lista.appendChild(card);
-        
-        // Mantém o scroll do histórico sempre no final
-        const d = document.getElementById(`hist-${c.id}`);
-        d.scrollTop = d.scrollHeight;
-    });
+.card {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 15px rgba(0,0,0,0.05);
+    margin-bottom: 25px;
 }
 
-// Gera o relatório consolidado para WhatsApp
-function copiarRelatorioPlantao() {
-    if (chamados.length === 0) return alert("Não há chamados ativos.");
+h3 { margin-top: 0; color: var(--orange); border-bottom: 1px solid #eee; padding-bottom: 10px; }
 
-    let textoFinal = `*RELATÓRIO DE PASSAGEM DE PLANTÃO - ELÉTRICA*\n`;
-    textoFinal += `====================================\n\n`;
-
-    chamados.forEach(c => {
-        textoFinal += `📍 *LOCAL:* ${c.local}\n`;
-        textoFinal += `🆔 *CHAMADO:* #${c.id}\n`;
-        textoFinal += `🔗 *LINK:* ${c.url}\n`;
-        textoFinal += `📝 *TRATATIVAS:* \n`;
-        
-        if (c.historico.length === 0) {
-            textoFinal += `   - Sem atualizações registradas.\n`;
-        } else {
-            c.historico.forEach(h => {
-                textoFinal += `   - [${h.hora}] ${h.texto}\n`;
-            });
-        }
-        textoFinal += `\n------------------------------------\n\n`;
-    });
-
-    textoFinal += `Operações de Redes`;
-
-    // Função de copiar
-    const tempInput = document.createElement('textarea');
-    tempInput.value = textoFinal;
-    document.body.appendChild(tempInput);
-    tempInput.select();
-    document.execCommand('copy');
-    document.body.removeChild(tempInput);
-
-    // Toast
-    const toast = document.getElementById('toast');
-    toast.style.display = 'block';
-    setTimeout(() => { toast.style.display = 'none'; }, 3000);
+textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-sizing: border-box;
+    font-family: inherit;
 }
 
-renderizar();
+.btn-primary {
+    background: var(--orange);
+    color: white;
+    border: none;
+    padding: 14px;
+    width: 100%;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-top: 12px;
+}
+
+.btn-share {
+    background: white;
+    color: var(--orange);
+    border: none;
+    padding: 10px 18px;
+    border-radius: 6px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+/* CARDS DE CHAMADO */
+.ticket-card {
+    background: white;
+    border-left: 10px solid var(--orange);
+    padding: 20px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+}
+
+.ticket-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 15px;
+    align-items: center;
+}
+
+.ticket-header a {
+    color: var(--orange);
+    font-weight: bold;
+    text-decoration: none;
+    background: #fff1eb;
+    padding: 6px 12px;
+    border-radius: 6px;
+}
+
+.local-box {
+    background: #f8f9fa;
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    border: 1px solid #eee;
+    font-weight: bold;
+}
+
+/* HISTÓRICO */
+.historico-container {
+    background: #fdfdfd;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    margin-bottom: 15px;
+}
+
+.historico-list {
+    padding: 12px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.msg-item {
+    padding: 8px 0;
+    border-bottom: 1px dotted #e0e0e0;
+    font-size: 0.95rem;
+}
+
+.msg-item b { color: var(--orange); margin-right: 8px; }
+
+.acao-tratativa { display: flex; gap: 10px; margin-top: 15px; }
+.acao-tratativa input { flex: 1; padding: 12px; border: 1px solid #ccc; border-radius: 6px; }
+
+.btn-add {
+    background: var(--navy);
+    color: white;
+    border: none;
+    padding: 0 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.btn-finalize {
+    background: var(--green);
+    color: white;
+    border: none;
+    padding: 12px;
+    width: 100%;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-top: 15px;
+}
+
+.toast {
+    position: fixed; bottom: 20px; right: 20px;
+    background: #222; color: white;
+    padding: 15px 30px; border-radius: 10px;
+    display: none; font-weight: bold;
+    z-index: 1000;
+}
