@@ -1,0 +1,30 @@
+:root { --orange: #F15A24; --green: #27ae60; --bg: #f4f7f6; --navy: #34495e; }
+body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); margin: 0; color: #2c3e50; }
+.main-header { background: var(--orange); color: white; padding: 1rem 5%; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+.container { padding: 20px 5%; max-width: 900px; margin: auto; }
+.card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 20px; }
+textarea { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-family: inherit; }
+.btn-primary { background: var(--orange); color: white; border: none; padding: 14px; width: 100%; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 10px; font-size: 1rem; }
+.btn-share { background: white; color: var(--orange); border: none; padding: 10px 18px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+
+/* Ticket Card */
+.ticket-card { background: white; border-left: 8px solid var(--orange); padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+.ticket-header { display: flex; justify-content: space-between; margin-bottom: 12px; align-items: center; }
+.ticket-header a { color: var(--orange); font-weight: 800; text-decoration: none; font-size: 1.1rem; background: #fff1eb; padding: 4px 10px; border-radius: 4px; }
+.local-box { background: #f8f9fa; padding: 12px; border-radius: 6px; margin-bottom: 15px; border: 1px solid #eee; font-weight: 600; }
+
+/* Histórico */
+.historico-container { background: #fdfdfd; border: 1px solid #eee; border-radius: 6px; margin-bottom: 15px; }
+.historico-list { padding: 10px; max-height: 180px; overflow-y: auto; font-size: 0.9rem; }
+.msg-item { padding: 6px 0; border-bottom: 1px solid #f1f1f1; line-height: 1.4; }
+.msg-item:last-child { border: none; }
+.msg-item b { color: var(--orange); margin-right: 5px; }
+
+/* Inputs de Tratativa */
+.acao-tratativa { display: flex; gap: 8px; margin-top: 10px; }
+.acao-tratativa input { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
+.btn-add { background: var(--navy); color: white; border: none; padding: 0 15px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+
+.btn-finalize { background: var(--green); color: white; border: none; padding: 12px; width: 100%; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 15px; font-size: 0.9rem; }
+
+.toast { position: fixed; bottom: 20px; right: 20px; background: #222; color: white; padding: 15px 25px; border-radius: 8px; display: none; font-weight: bold; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
