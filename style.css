@@ -4,6 +4,7 @@
     --dark: #2c3e50;
     --bg: #f4f7f6;
     --navy: #34495e;
+    --cancel: #95a5a6;
 }
 
 body {
@@ -25,7 +26,7 @@ body {
 
 .main-header h1 { margin: 0; font-size: 1.5rem; }
 
-.container { padding: 20px 5%; max-width: 900px; margin: auto; }
+.container { padding: 20px 5%; max-width: 950px; margin: auto; }
 
 .card {
     background: white;
@@ -44,6 +45,7 @@ textarea {
     border-radius: 8px;
     box-sizing: border-box;
     font-family: inherit;
+    resize: vertical;
 }
 
 .btn-primary {
@@ -56,7 +58,10 @@ textarea {
     font-weight: bold;
     cursor: pointer;
     margin-top: 12px;
+    transition: 0.2s;
 }
+
+.btn-primary:hover { background: #d44d1d; }
 
 .btn-share {
     background: white;
@@ -101,9 +106,10 @@ textarea {
     margin-bottom: 15px;
     border: 1px solid #eee;
     font-weight: bold;
+    font-size: 1rem;
 }
 
-/* HISTÓRICO */
+/* HISTÓRICO E TRATATIVAS */
 .historico-container {
     background: #fdfdfd;
     border: 1px solid #eee;
@@ -113,30 +119,62 @@ textarea {
 
 .historico-list {
     padding: 12px;
-    max-height: 200px;
+    max-height: 250px;
     overflow-y: auto;
 }
 
 .msg-item {
-    padding: 8px 0;
-    border-bottom: 1px dotted #e0e0e0;
-    font-size: 0.95rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 10px 0;
+    border-bottom: 1px solid #f1f1f1;
 }
 
 .msg-item b { color: var(--orange); margin-right: 8px; }
 
+.item-actions button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    margin-left: 8px;
+    font-size: 14px;
+    opacity: 0.6;
+}
+
+.item-actions button:hover { opacity: 1; }
+
+/* ESTILO EDIÇÃO IN-LINE */
+.editing-box {
+    flex-direction: column;
+    gap: 10px;
+    background: #fff9f6;
+    padding: 10px !important;
+    border-radius: 6px;
+}
+
+.edit-input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid var(--orange);
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+.edit-btns {
+    display: flex;
+    gap: 8px;
+    align-self: flex-end;
+}
+
+.btn-save-mini { background: var(--orange); color: white; border: none; padding: 4px 12px; border-radius: 4px; font-size: 12px; cursor: pointer; }
+.btn-cancel-mini { background: var(--cancel); color: white; border: none; padding: 4px 12px; border-radius: 4px; font-size: 12px; cursor: pointer; }
+
+/* AÇÕES DO CARD */
 .acao-tratativa { display: flex; gap: 10px; margin-top: 15px; }
 .acao-tratativa input { flex: 1; padding: 12px; border: 1px solid #ccc; border-radius: 6px; }
 
-.btn-add {
-    background: var(--navy);
-    color: white;
-    border: none;
-    padding: 0 20px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: bold;
-}
+.btn-add { background: var(--navy); color: white; border: none; padding: 0 20px; border-radius: 6px; cursor: pointer; font-weight: bold; }
 
 .btn-finalize {
     background: var(--green);
