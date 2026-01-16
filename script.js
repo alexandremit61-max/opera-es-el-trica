@@ -20,22 +20,35 @@ function adicionarChamado() {
     const texto = input.value.trim();
     if (!texto) return;
 
-    // Busca exatamente 6 números para o ID do chamado
+    // 1. Busca os 6 números do ticket
     const matchId = texto.match(/\d{6}/);
     const ticketId = matchId ? matchId[0] : "000000";
     
-    // Extrai o Local (entre hífens ou 1ª linha)
-    const partes = texto.split('-');
-    let local = "Local não identificado";
-    if (partes.length > 1) {
-        local = partes[1].trim() + (partes[2] ? " - " + partes[2].trim() : "");
+    // 2. Busca o Título dentro do texto (Procura a linha que tem a estrela ✨)
+    let localFinal = "";
+    const linhas = texto.split('\n');
+    
+    // Procura a linha que contém "Título:"
+    const linhaTitulo = linhas.find(l => l.includes('✨ *Título:*'));
+    
+    if (linhaTitulo) {
+        // Pega tudo que vem depois de "Título:*"
+        localFinal = linhaTitulo.split('Título:*')[1].trim();
+        // Remove asteriscos que sobram no final se houver
+        localFinal = localFinal.replace(/\*/g, '').trim();
     } else {
-        local = texto.split('\n')[0].substring(0, 60);
+        // Fallback: se não achar o padrão, tenta pegar a primeira linha e limpar emojis
+        localFinal = texto.split('\n')[0].replace(/[📝✨🏷️🏢📆👤🔗]/g, '').trim();
+    }
+
+    // 3. Garantia: se ainda estiver vazio, usa um padrão
+    if (!localFinal || localFinal.length < 3) {
+        localFinal = "Incidente em " + ticketId;
     }
 
     const novo = {
         id: ticketId,
-        local: local,
+        local: localFinal,
         url: `https://saski.brisanet.net.br/chamado/${ticketId}`,
         historico: []
     };
@@ -53,7 +66,6 @@ function adicionarComentario(id) {
     const index = chamados.findIndex(c => c.id == id);
     const hora = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-    // Adiciona ao histórico acumulativo do chamado
     chamados[index].historico.push({ hora: hora, texto: msg });
 
     campo.value = ""; 
@@ -62,7 +74,6 @@ function adicionarComentario(id) {
 
 function finalizarChamado(id) {
     if (confirm(`Confirmar finalização do chamado #${id}?`)) {
-        // Filtra para remover apenas o ID clicado
         chamados = chamados.filter(c => c.id !== id);
         salvarDados();
     }
@@ -70,7 +81,8 @@ function finalizarChamado(id) {
 
 function renderizar() {
     const container = document.getElementById('listaChamados');
-    document.getElementById('count').innerText = chamados.length;
+    const countEl = document.getElementById('count');
+    if (countEl) countEl.innerText = chamados.length;
     container.innerHTML = "";
 
     chamados.forEach(c => {
@@ -86,7 +98,7 @@ function renderizar() {
 
             <div class="historico-container">
                 <div class="historico-list" id="hist-${c.id}">
-                    ${c.historico.length === 0 ? '<p style="color:#aaa; text-align:center">Aguardando tratativas...</p>' : 
+                    ${c.historico.length === 0 ? '<p style="color:#aaa; text-align:center; font-size: 14px; margin-top: 10px;">Aguardando tratativas...</p>' : 
                       c.historico.map(h => `<div class="msg-item"><b>[${h.hora}]</b> ${h.texto}</div>`).join('')}
                 </div>
             </div>
@@ -100,7 +112,7 @@ function renderizar() {
         `;
         container.appendChild(card);
         const d = document.getElementById(`hist-${c.id}`);
-        d.scrollTop = d.scrollHeight;
+        if(d) d.scrollTop = d.scrollHeight;
     });
 }
 
@@ -134,6 +146,8 @@ function copiarRelatorioPlantao() {
     document.body.removeChild(textarea);
 
     const toast = document.getElementById('toast');
-    toast.style.display = 'block';
-    setTimeout(() => { toast.style.display = 'none'; }, 3000);
+    if (toast) {
+        toast.style.display = 'block';
+        setTimeout(() => { toast.style.display = 'none'; }, 3000);
+    }
 }
