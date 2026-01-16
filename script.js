@@ -1,50 +1,44 @@
 let chamados = [];
 
-// Carrega os dados salvos no navegador ao iniciar
+// 1. Inicialização: Carrega dados do navegador
 window.onload = function() {
     const salvos = localStorage.getItem('saski_eletrica_db');
     if (salvos) {
         chamados = JSON.parse(salvos);
+        // Reseta estado de edição ao carregar
+        chamados.forEach(c => c.historico.forEach(h => h.editando = false));
         renderizar();
     }
 };
 
-// Salva o estado atual no LocalStorage
+// 2. Salva permanentemente no navegador
 function salvarDados() {
     localStorage.setItem('saski_eletrica_db', JSON.stringify(chamados));
     renderizar();
 }
 
+// 3. Adiciona novo chamado via colagem
 function adicionarChamado() {
     const input = document.getElementById('rawInput');
     const texto = input.value.trim();
     if (!texto) return;
 
-    // 1. Busca os 6 números do ticket
+    // Busca ID de 6 dígitos
     const matchId = texto.match(/\d{6}/);
     const ticketId = matchId ? matchId[0] : "000000";
     
-    // 2. Busca o Título dentro do texto (Procura a linha que tem a estrela ✨)
+    // Extrai o Título (Sigla inclusive)
     let localFinal = "";
     const linhas = texto.split('\n');
-    
-    // Procura a linha que contém "Título:"
     const linhaTitulo = linhas.find(l => l.includes('✨ *Título:*'));
     
     if (linhaTitulo) {
-        // Pega tudo que vem depois de "Título:*"
-        localFinal = linhaTitulo.split('Título:*')[1].trim();
-        // Remove asteriscos que sobram no final se houver
-        localFinal = localFinal.replace(/\*/g, '').trim();
+        localFinal = linhaTitulo.split('Título:*')[1].trim().replace(/\*/g, '').trim();
     } else {
-        // Fallback: se não achar o padrão, tenta pegar a primeira linha e limpar emojis
         localFinal = texto.split('\n')[0].replace(/[📝✨🏷️🏢📆👤🔗]/g, '').trim();
     }
 
-    // 3. Garantia: se ainda estiver vazio, usa um padrão
-    if (!localFinal || localFinal.length < 3) {
-        localFinal = "Incidente em " + ticketId;
-    }
+    if (!localFinal || localFinal.length < 3) localFinal = "Incidente em " + ticketId;
 
     const novo = {
         id: ticketId,
@@ -58,6 +52,8 @@ function adicionarChamado() {
     salvarDados();
 }
 
+// --- GESTÃO DE TRATATIVAS (HISTÓRICO) ---
+
 function adicionarComentario(id) {
     const campo = document.getElementById(`input-${id}`);
     const msg = campo.value.trim();
@@ -66,11 +62,48 @@ function adicionarComentario(id) {
     const index = chamados.findIndex(c => c.id == id);
     const hora = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-    chamados[index].historico.push({ hora: hora, texto: msg });
+    chamados[index].historico.push({ 
+        id: Date.now(), 
+        hora: hora, 
+        texto: msg,
+        editando: false 
+    });
 
     campo.value = ""; 
     salvarDados();
 }
+
+// Abre o modo de edição no próprio card
+function alternarEdicao(ticketId, comentarioId) {
+    const tIdx = chamados.findIndex(c => c.id == ticketId);
+    const hIdx = chamados[tIdx].historico.findIndex(h => h.id == comentarioId);
+    
+    chamados[tIdx].historico[hIdx].editando = !chamados[tIdx].historico[hIdx].editando;
+    renderizar(); // Apenas muda visual
+}
+
+// Salva a edição feita no campo in-line
+function salvarEdicao(ticketId, comentarioId) {
+    const tIdx = chamados.findIndex(c => c.id == ticketId);
+    const hIdx = chamados[tIdx].historico.findIndex(h => h.id == comentarioId);
+    const novoTexto = document.getElementById(`edit-input-${comentarioId}`).value.trim();
+    
+    if (novoTexto) {
+        chamados[tIdx].historico[hIdx].texto = novoTexto;
+        chamados[tIdx].historico[hIdx].editando = false;
+        salvarDados();
+    }
+}
+
+function removerComentario(ticketId, comentarioId) {
+    if (confirm("Você tem certeza que deseja remover esta tratativa?")) {
+        const tIdx = chamados.findIndex(c => c.id == ticketId);
+        chamados[tIdx].historico = chamados[tIdx].historico.filter(h => h.id != comentarioId);
+        salvarDados();
+    }
+}
+
+// --- RENDERIZAÇÃO E RELATÓRIO ---
 
 function finalizarChamado(id) {
     if (confirm(`Confirmar finalização do chamado #${id}?`)) {
@@ -81,8 +114,7 @@ function finalizarChamado(id) {
 
 function renderizar() {
     const container = document.getElementById('listaChamados');
-    const countEl = document.getElementById('count');
-    if (countEl) countEl.innerText = chamados.length;
+    document.getElementById('count').innerText = chamados.length;
     container.innerHTML = "";
 
     chamados.forEach(c => {
@@ -98,8 +130,29 @@ function renderizar() {
 
             <div class="historico-container">
                 <div class="historico-list" id="hist-${c.id}">
-                    ${c.historico.length === 0 ? '<p style="color:#aaa; text-align:center; font-size: 14px; margin-top: 10px;">Aguardando tratativas...</p>' : 
-                      c.historico.map(h => `<div class="msg-item"><b>[${h.hora}]</b> ${h.texto}</div>`).join('')}
+                    ${c.historico.length === 0 ? 
+                        '<p style="color:#aaa; text-align:center; font-size: 14px; margin-top: 10px;">Aguardando tratativas...</p>' : 
+                        c.historico.map(h => {
+                            if (h.editando) {
+                                return `
+                                <div class="msg-item editing-box">
+                                    <input type="text" id="edit-input-${h.id}" value="${h.texto}" class="edit-input">
+                                    <div class="edit-btns">
+                                        <button onclick="salvarEdicao('${c.id}', ${h.id})" class="btn-save-mini">Salvar</button>
+                                        <button onclick="alternarEdicao('${c.id}', ${h.id})" class="btn-cancel-mini">Cancelar</button>
+                                    </div>
+                                </div>`;
+                            } else {
+                                return `
+                                <div class="msg-item">
+                                    <span><b>[${h.hora}]</b> ${h.texto}</span>
+                                    <div class="item-actions">
+                                        <button onclick="alternarEdicao('${c.id}', ${h.id})" title="Editar">✏️</button>
+                                        <button onclick="removerComentario('${c.id}', ${h.id})" title="Remover">❌</button>
+                                    </div>
+                                </div>`;
+                            }
+                        }).join('')}
                 </div>
             </div>
 
@@ -146,8 +199,6 @@ function copiarRelatorioPlantao() {
     document.body.removeChild(textarea);
 
     const toast = document.getElementById('toast');
-    if (toast) {
-        toast.style.display = 'block';
-        setTimeout(() => { toast.style.display = 'none'; }, 3000);
-    }
+    toast.style.display = 'block';
+    setTimeout(() => { toast.style.display = 'none'; }, 3000);
 }
