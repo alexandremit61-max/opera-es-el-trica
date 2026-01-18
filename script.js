@@ -1,3 +1,6 @@
+// SEU LINK DO MOCKAPI JÁ CONFIGURADO
+const API_URL = "https://696cb398f4a79b31517f95f0.mockapi.io/chamados";
+
 let chamados = [];
 
 // 1. Inicialização: Carrega dados do navegador
