@@ -1,27 +1,45 @@
-// SEU LINK DO MOCKAPI JÁ CONFIGURADO
+// CONFIGURAÇÃO DO SEU BANCO DE DADOS NA NUVEM
 const API_URL = "https://696cb398f4a79b31517f95f0.mockapi.io/chamados";
 
 let chamados = [];
 
-// 1. Inicialização: Carrega dados do navegador
+/**
+ * 1. INICIALIZAÇÃO
+ * Carrega os dados do servidor ao abrir e configura o timer de sincronização
+ */
 window.onload = function() {
-    const salvos = localStorage.getItem('saski_eletrica_db');
-    if (salvos) {
-        chamados = JSON.parse(salvos);
-        // Reseta estado de edição ao carregar
-        chamados.forEach(c => c.historico.forEach(h => h.editando = false));
-        renderizar();
-    }
+    renderizarLoading();
+    atualizarDadosServidor();
+    
+    // SINCRONIZAÇÃO AUTOMÁTICA: 
+    // A cada 30 segundos ele busca novidades do servidor para mostrar nos outros PCs
+    setInterval(() => {
+        // Só busca se ninguém estiver editando uma mensagem no momento (para não fechar a caixa de edição)
+        const alguemEditando = chamados.some(c => c.historico.some(h => h.editando));
+        if (!alguemEditando) {
+            atualizarDadosServidor();
+        }
+    }, 30000); 
 };
 
-// 2. Salva permanentemente no navegador
-function salvarDados() {
-    localStorage.setItem('saski_eletrica_db', JSON.stringify(chamados));
-    renderizar();
+// Função para buscar os dados no servidor MockAPI
+async function atualizarDadosServidor() {
+    try {
+        const res = await fetch(API_URL);
+        if (!res.ok) throw new Error();
+        chamados = await res.json();
+        renderizar();
+        console.log("Dados sincronizados com o servidor.");
+    } catch (err) {
+        console.error("Erro ao sincronizar. Verifique a conexão com a internet.");
+    }
 }
 
-// 3. Adiciona novo chamado via colagem
-function adicionarChamado() {
+/**
+ * 2. ADICIONAR NOVO CHAMADO
+ * Envia o chamado para a nuvem via POST
+ */
+async function adicionarChamado() {
     const input = document.getElementById('rawInput');
     const texto = input.value.trim();
     if (!texto) return;
@@ -30,7 +48,7 @@ function adicionarChamado() {
     const matchId = texto.match(/\d{6}/);
     const ticketId = matchId ? matchId[0] : "000000";
     
-    // Extrai o Título (Sigla inclusive)
+    // Extrai o Título
     let localFinal = "";
     const linhas = texto.split('\n');
     const linhaTitulo = linhas.find(l => l.includes('✨ *Título:*'));
@@ -44,28 +62,58 @@ function adicionarChamado() {
     if (!localFinal || localFinal.length < 3) localFinal = "Incidente em " + ticketId;
 
     const novo = {
-        id: ticketId,
+        ticketId: ticketId, // Guardamos o ID do Saski aqui
         local: localFinal,
         url: `https://saski.brisanet.net.br/chamado/${ticketId}`,
         historico: []
     };
 
-    chamados.unshift(novo);
-    input.value = "";
-    salvarDados();
+    // Mostra feedback de carregamento no botão
+    const btn = document.querySelector('.btn-primary');
+    const txtOriginal = btn.innerText;
+    btn.innerText = "Salvando na Nuvem...";
+
+    try {
+        await fetch(API_URL, {
+            method: 'POST',
+            headers: {'content-type':'application/json'},
+            body: JSON.stringify(novo)
+        });
+        input.value = "";
+        atualizarDadosServidor(); // Atualiza a lista após salvar
+    } catch (err) {
+        alert("Erro ao salvar no servidor!");
+    } finally {
+        btn.innerText = txtOriginal;
+    }
 }
 
-// --- GESTÃO DE TRATATIVAS (HISTÓRICO) ---
+/**
+ * 3. GESTÃO DE TRATATIVAS (ADD, EDIT, REMOVE)
+ * Como o histórico está dentro do objeto, usamos PUT para atualizar o chamado inteiro no servidor
+ */
+async function enviarAtualizacaoAoServidor(chamado) {
+    try {
+        await fetch(`${API_URL}/${chamado.id}`, {
+            method: 'PUT',
+            headers: {'content-type':'application/json'},
+            body: JSON.stringify(chamado)
+        });
+        atualizarDadosServidor();
+    } catch (err) {
+        console.error("Erro ao atualizar servidor:", err);
+    }
+}
 
-function adicionarComentario(id) {
-    const campo = document.getElementById(`input-${id}`);
+function adicionarComentario(idInterno) {
+    const campo = document.getElementById(`input-${idInterno}`);
     const msg = campo.value.trim();
     if (!msg) return;
 
-    const index = chamados.findIndex(c => c.id == id);
+    const chamado = chamados.find(c => c.id == idInterno);
     const hora = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-    chamados[index].historico.push({ 
+    chamado.historico.push({ 
         id: Date.now(), 
         hora: hora, 
         texto: msg,
@@ -73,46 +121,57 @@ function adicionarComentario(id) {
     });
 
     campo.value = ""; 
-    salvarDados();
+    enviarAtualizacaoAoServidor(chamado);
 }
 
-// Abre o modo de edição no próprio card
-function alternarEdicao(ticketId, comentarioId) {
-    const tIdx = chamados.findIndex(c => c.id == ticketId);
-    const hIdx = chamados[tIdx].historico.findIndex(h => h.id == comentarioId);
+function alternarEdicao(idInterno, comentarioId) {
+    const chamado = chamados.find(c => c.id == idInterno);
+    const hIdx = chamado.historico.findIndex(h => h.id == comentarioId);
     
-    chamados[tIdx].historico[hIdx].editando = !chamados[tIdx].historico[hIdx].editando;
-    renderizar(); // Apenas muda visual
+    chamado.historico[hIdx].editando = !chamado.historico[hIdx].editando;
+    renderizar(); // Muda apenas visualmente antes de salvar
 }
 
-// Salva a edição feita no campo in-line
-function salvarEdicao(ticketId, comentarioId) {
-    const tIdx = chamados.findIndex(c => c.id == ticketId);
-    const hIdx = chamados[tIdx].historico.findIndex(h => h.id == comentarioId);
+function salvarEdicao(idInterno, comentarioId) {
+    const chamado = chamados.find(c => c.id == idInterno);
+    const hIdx = chamado.historico.findIndex(h => h.id == comentarioId);
     const novoTexto = document.getElementById(`edit-input-${comentarioId}`).value.trim();
     
     if (novoTexto) {
-        chamados[tIdx].historico[hIdx].texto = novoTexto;
-        chamados[tIdx].historico[hIdx].editando = false;
-        salvarDados();
+        chamado.historico[hIdx].texto = novoTexto;
+        chamado.historico[hIdx].editando = false;
+        enviarAtualizacaoAoServidor(chamado);
     }
 }
 
-function removerComentario(ticketId, comentarioId) {
+function removerComentario(idInterno, comentarioId) {
     if (confirm("Você tem certeza que deseja remover esta tratativa?")) {
-        const tIdx = chamados.findIndex(c => c.id == ticketId);
-        chamados[tIdx].historico = chamados[tIdx].historico.filter(h => h.id != comentarioId);
-        salvarDados();
+        const chamado = chamados.find(c => c.id == idInterno);
+        chamado.historico = chamado.historico.filter(h => h.id != comentarioId);
+        enviarAtualizacaoAoServidor(chamado);
     }
 }
 
-// --- RENDERIZAÇÃO E RELATÓRIO ---
-
-function finalizarChamado(id) {
-    if (confirm(`Confirmar finalização do chamado #${id}?`)) {
-        chamados = chamados.filter(c => c.id !== id);
-        salvarDados();
+/**
+ * 4. FINALIZAR CHAMADO
+ * Remove o registro definitivamente do servidor
+ */
+async function finalizarChamado(idInterno) {
+    if (confirm(`Deseja finalizar e excluir este chamado do relatório de todos os PCs?`)) {
+        try {
+            await fetch(`${API_URL}/${idInterno}`, { method: 'DELETE' });
+            atualizarDadosServidor();
+        } catch (err) {
+            alert("Erro ao remover do servidor.");
+        }
     }
+}
+
+/**
+ * 5. INTERFACE (RENDERIZAÇÃO)
+ */
+function renderizarLoading() {
+    document.getElementById('listaChamados').innerHTML = '<p style="text-align:center; padding: 20px;">Sincronizando com o servidor de dados...</p>';
 }
 
 function renderizar() {
@@ -120,12 +179,18 @@ function renderizar() {
     document.getElementById('count').innerText = chamados.length;
     container.innerHTML = "";
 
-    chamados.forEach(c => {
+    if (chamados.length === 0) {
+        container.innerHTML = '<p style="text-align:center; color:#999; margin-top:20px;">Nenhum chamado ativo na rede.</p>';
+        return;
+    }
+
+    // Inverte a ordem para mostrar os mais novos no topo
+    [...chamados].reverse().forEach(c => {
         const card = document.createElement('div');
         card.className = 'ticket-card';
         card.innerHTML = `
             <div class="ticket-header">
-                <a href="${c.url}" target="_blank">🔗 TICKET #${c.id}</a>
+                <a href="${c.url}" target="_blank">🔗 TICKET #${c.ticketId}</a>
                 <small>ELÉTRICA</small>
             </div>
             
@@ -180,7 +245,7 @@ function copiarRelatorioPlantao() {
 
     chamados.forEach(c => {
         relatorio += `📍 *LOCAL:* ${c.local}\n`;
-        relatorio += `🆔 *CHAMADO:* #${c.id}\n`;
+        relatorio += `🆔 *CHAMADO:* #${c.ticketId}\n`;
         relatorio += `🔗 *LINK:* ${c.url}\n`;
         relatorio += `📝 *TRATATIVAS:* \n`;
         
@@ -202,6 +267,8 @@ function copiarRelatorioPlantao() {
     document.body.removeChild(textarea);
 
     const toast = document.getElementById('toast');
-    toast.style.display = 'block';
-    setTimeout(() => { toast.style.display = 'none'; }, 3000);
+    if(toast){
+        toast.style.display = 'block';
+        setTimeout(() => { toast.style.display = 'none'; }, 3000);
+    }
 }
